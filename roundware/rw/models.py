@@ -272,6 +272,7 @@ class Audiotrack(models.Model):
     fadeout_when_filtered = models.BooleanField(default=False, verbose_name='Fade Out When Asset Filtered')
     timed_asset_priority = models.CharField(
         max_length=10, choices=priority_choices, default='normal', verbose_name='Timed Asset Priority')
+    testvolume = models.FloatField(verbose_name='Test Volume')
 
     def norm_minduration(self):
         if self.minduration:
