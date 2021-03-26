@@ -211,6 +211,9 @@ class AssetAdmin(ProjectProtectedModelAdmin):
         ('Media Data', {
             'fields': (
                 'mediatype',
+                'title',
+                'email_author',
+                'author',
                 'media_display',
                 'file',
                 'user',

@@ -5,7 +5,7 @@
 from django.contrib.gis.geos import Point
 from django.core.cache import cache
 
-cache # pyflakes, make sure it is imported, for patching in tests
+cache  # pyflakes, make sure it is imported, for patching in tests
 from django.core.files.storage import FileSystemStorage
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.exceptions import NON_FIELD_ERRORS
@@ -27,11 +27,9 @@ class Asset(models.Model):
     """
     Individual piece of content
     """
-    ASSET_MEDIA_TYPES = [('audio', 'audio'), ('video', 'video'),
-                         ('photo', 'photo'), ('text', 'text')]
+    ASSET_MEDIA_TYPES = [('audio', 'audio'), ('photo', 'photo'), ('text', 'text')]
     MEDIATYPE_CONTENT_TYPES = {
         'audio': settings.ALLOWED_AUDIO_MIME_TYPES,
-        'video': [],
         'photo': settings.ALLOWED_IMAGE_MIME_TYPES,
         'text': settings.ALLOWED_TEXT_MIME_TYPES,
     }
@@ -41,23 +39,28 @@ class Asset(models.Model):
         app_label = 'rw'
 
     session = models.ForeignKey(
-        'Session', null=True, blank=True, on_delete = models.SET_NULL)
+        'Session', null=True, blank=True, on_delete=models.SET_NULL)
+
+    title = models.CharField(max_length=100, blank=False, default="")
+    email_author = models.CharField(max_length=100, blank=False, default="")
+    author = models.CharField(max_length=100, blank=False, default="")
+
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete = models.SET_NULL)
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
     latitude = models.FloatField(null=True, blank=False)
     longitude = models.FloatField(null=True, blank=False)
     shape = models.MultiPolygonField(geography=True, null=True, blank=True)
     filename = models.CharField(max_length=256, null=True, blank=True)
     file = ValidatedFileField(storage=FileSystemStorage(
         location=settings.MEDIA_ROOT,
-        base_url=settings.MEDIA_URL,),
-    #    content_types=settings.ALLOWED_MIME_TYPES,
+        base_url=settings.MEDIA_URL, ),
+        #    content_types=settings.ALLOWED_MIME_TYPES,
         upload_to=".", help_text="Upload file")
     volume = models.FloatField(null=True, blank=True, default=1.0)
 
     submitted = models.BooleanField(default=True)
     project = models.ForeignKey(
-        'Project', null=True, blank=False, on_delete = models.SET_NULL)
+        'Project', null=True, blank=False, on_delete=models.SET_NULL)
 
     created = models.DateTimeField(default=datetime.now)
     updated = models.DateTimeField(auto_now=True)
@@ -65,7 +68,7 @@ class Asset(models.Model):
     start_time = models.FloatField(null=True, blank=True)
     end_time = models.FloatField(null=True, blank=True)
     tags = models.ManyToManyField('Tag', blank=True)
-    language = models.ForeignKey('Language', null=True, on_delete = models.SET_NULL)
+    language = models.ForeignKey('Language', null=True, on_delete=models.SET_NULL)
     weight = models.IntegerField(
         choices=[(i, i) for i in range(0, 100)], default=50)
     mediatype = models.CharField(
@@ -79,7 +82,7 @@ class Asset(models.Model):
     # TODO: needs verification
     loc_caption = ValidatedFileField(storage=FileSystemStorage(
         location=settings.MEDIA_ROOT,
-        base_url=settings.MEDIA_URL,),
+        base_url=settings.MEDIA_URL, ),
         content_types=settings.ALLOWED_TEXT_MIME_TYPES,
         upload_to=".", help_text="Upload captions", null=True)
 
@@ -87,7 +90,7 @@ class Asset(models.Model):
     # creates a relationship of an Asset to the Envelope, in which it was
     # initially added
     initialenvelope = models.ForeignKey(
-        'Envelope', null=True, on_delete = models.SET_NULL)
+        'Envelope', null=True, on_delete=models.SET_NULL)
 
     # no more FilterSpec in Django >= 1.4
     # tags.tag_category_filter = True
@@ -116,8 +119,8 @@ class Asset(models.Model):
             raise ValidationError(
                 {
                     NON_FIELD_ERRORS:
-                    (u"File type %s not supported for asset mediatype %s"
-                     % (content_type, self.mediatype),)
+                        (u"File type %s not supported for asset mediatype %s"
+                         % (content_type, self.mediatype),)
                 }
             )
 
@@ -132,6 +135,7 @@ class Asset(models.Model):
             return self.text_display()
         else:
             return ""
+
     media_display.short_name = "media"
     media_display.allow_tags = True
 
@@ -139,6 +143,7 @@ class Asset(models.Model):
     def audio_player(self):
         if self.mediatype == 'audio':
             return """<div data-filename="%s" class="media-display audio-file"></div>""" % self.filename
+
     audio_player.short_name = "audio"
     audio_player.allow_tags = True
 
@@ -149,6 +154,7 @@ class Asset(models.Model):
                ><img src="%s" alt="%s" title="%s"/></a></div>""" % (
             self.filename, image_src, image_src,
             self.description, "click for full image")
+
     image_display.short_name = "image"
     image_display.allow_tags = True
 
@@ -164,7 +170,9 @@ class Asset(models.Model):
             return """<div data-filename="%s" class="media-display text-file"
                    >%s %s</div>""" % (self.filename, excerpt, more_str)
         except Exception as e:
-            return """<div class="media-display" data-filename="%s">""" + '%s (%s)' % (self.filename, e.message, type(e)) + """</div>"""
+            return """<div class="media-display" data-filename="%s">""" + '%s (%s)' % (
+            self.filename, e.message, type(e)) + """</div>"""
+
     text_display.short_name = "text"
     text_display.allow_tags = True
 
@@ -175,6 +183,7 @@ class Asset(models.Model):
         then move pin to exact location of asset.</div>
         <div class="GMap" id="map" style="width:800px; height: 600px; margin-top: 10px;"></div>"""  # height 600
         return html
+
     location_map.short_name = "location"
     location_map.allow_tags = True
 
@@ -185,6 +194,7 @@ class Asset(models.Model):
     def audiolength_in_seconds(self):
         if self.audiolength:
             return '%.2f' % round(self.audiolength / 1000000000.0, 2)
+
     norm_audiolength.short_description = "Audio Length"
     norm_audiolength.name = "Audio Length"
     norm_audiolength.allow_tags = True
@@ -192,6 +202,7 @@ class Asset(models.Model):
     @mark_safe
     def media_link_url(self):
         return '<a href="%s%s" target="_new">%s</a>' % (settings.MEDIA_URL, self.filename, self.filename)
+
     media_link_url.allow_tags = True
 
     @mark_safe
@@ -257,9 +268,9 @@ class Audiotrack(models.Model):
     priority_choices = [('highest', 'highest'),
                         ('normal', 'normal'),
                         ('lowest', 'lowest'),
-                        ('discard', 'discard'),]
+                        ('discard', 'discard'), ]
 
-    project = models.ForeignKey('Project', on_delete = models.CASCADE)
+    project = models.ForeignKey('Project', on_delete=models.CASCADE)
     minvolume = models.FloatField(verbose_name='Min Volume')
     maxvolume = models.FloatField(verbose_name='Max Volume')
     minduration = models.FloatField(verbose_name='Min Playback Duration')
@@ -286,24 +297,28 @@ class Audiotrack(models.Model):
     def norm_minduration(self):
         if self.minduration:
             return "%.2f s" % (self.minduration / 1000000000.0,)
+
     norm_minduration.short_description = "Min Duration"
     norm_minduration.name = "Min Duration"
 
     def norm_maxduration(self):
         if self.maxduration:
             return "%.2f s" % (self.maxduration / 1000000000.0,)
+
     norm_maxduration.short_description = "Max Duration"
     norm_maxduration.name = "Max Duration"
 
     def norm_mindeadair(self):
         if self.mindeadair:
             return "%.2f s" % (self.mindeadair / 1000000000.0,)
+
     norm_mindeadair.short_description = "Min Silence"
     norm_mindeadair.name = "Min Silence"
 
     def norm_maxdeadair(self):
         if self.maxdeadair:
             return "%.2f s" % (self.maxdeadair / 1000000000.0,)
+
     norm_maxdeadair.short_description = "Max Silence"
     norm_maxdeadair.name = "Max Silence"
 
@@ -315,7 +330,7 @@ class Envelope(models.Model):
     """
     Entity for bundling Assets together
     """
-    session = models.ForeignKey('Session', blank=True, on_delete = models.CASCADE)
+    session = models.ForeignKey('Session', blank=True, on_delete=models.CASCADE)
     created = models.DateTimeField(default=datetime.now)
     assets = models.ManyToManyField(Asset, blank=True, related_name='envelope')
 
@@ -329,7 +344,7 @@ class Event(models.Model):
     """
     server_time = models.DateTimeField()
     client_time = models.CharField(max_length=50, null=True, blank=True)
-    session = models.ForeignKey('Session', on_delete = models.CASCADE)
+    session = models.ForeignKey('Session', on_delete=models.CASCADE)
 
     event_type = models.CharField(max_length=50)
     data = models.TextField(null=True, blank=True)
@@ -353,8 +368,8 @@ class ListeningHistoryItem(models.Model):
     """
     Tracks what Assets are played when in each Session
     """
-    session = models.ForeignKey('Session', on_delete = models.CASCADE)
-    asset = models.ForeignKey(Asset, on_delete = models.CASCADE)
+    session = models.ForeignKey('Session', on_delete=models.CASCADE)
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
     starttime = models.DateTimeField()
     duration = models.BigIntegerField(null=True, blank=True)
 
@@ -365,11 +380,13 @@ class ListeningHistoryItem(models.Model):
     def duration_in_seconds(self):
         if self.duration:
             return '%.2f' % round(self.duration / 1000000000.0, 2)
+
     norm_duration.short_description = "Playback Duration"
     norm_duration.name = "Playback Duration"
 
     def __str__(self):
-        return str(self.id) + ": Session id: " + str(self.session.id) + ": Asset id: " + str(self.asset.id) + " duration: " + str(self.duration)
+        return str(self.id) + ": Session id: " + str(self.session.id) + ": Asset id: " + str(
+            self.asset.id) + " duration: " + str(self.duration)
 
     class Meta:
         verbose_name = 'Listening History Item'
@@ -381,7 +398,7 @@ class LocalizedString(models.Model):
     A string and corresponding language.
     """
     localized_string = models.TextField()
-    language = models.ForeignKey(Language, on_delete = models.CASCADE)
+    language = models.ForeignKey(Language, on_delete=models.CASCADE)
 
     def __str__(self):
         return str(self.id) + ": Language: " + self.language.name + ", String: " + self.localized_string
@@ -442,7 +459,7 @@ class Project(models.Model):
     legal_agreement_loc = models.ManyToManyField(
         LocalizedString, related_name='legal_agreement_string', blank=True)
     repeat_mode = models.CharField(default=STOP, max_length=10, blank=False,
-                               choices=REPEAT_MODES)
+                                   choices=REPEAT_MODES)
 
     files_url = models.CharField(max_length=512, blank=True)
     files_version = models.CharField(max_length=16, blank=True)
@@ -504,8 +521,8 @@ class Session(models.Model):
     starttime = models.DateTimeField()
     stoptime = models.DateTimeField(null=True, blank=True)
 
-    project = models.ForeignKey(Project, on_delete = models.CASCADE)
-    language = models.ForeignKey(Language, null=True, on_delete = models.SET_NULL)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    language = models.ForeignKey(Language, null=True, on_delete=models.SET_NULL)
     client_type = models.CharField(max_length=128, null=True, blank=True)
     client_system = models.CharField(max_length=128, null=True, blank=True)
     demo_stream_enabled = models.BooleanField(default=False)
@@ -532,7 +549,7 @@ class Speaker(models.Model):
             if self.id and not self.attenuation_border:
                 self.build_attenuation_buffer_line()
 
-    project = models.ForeignKey(Project, on_delete = models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
     activeyn = models.BooleanField(default=False)
     code = models.CharField(max_length=10)
     maxvolume = models.FloatField()
@@ -598,8 +615,8 @@ class Tag(models.Model):
         ("_within_10km", "Assets within 10km."),
         ("_ten_most_recent_days", "Assets created within 10 days."),
     )
-    project = models.ForeignKey(Project, null=True, blank=False, on_delete = models.SET_NULL)
-    tag_category = models.ForeignKey('TagCategory', null=True, on_delete = models.SET_NULL)
+    project = models.ForeignKey(Project, null=True, blank=False, on_delete=models.SET_NULL)
+    tag_category = models.ForeignKey('TagCategory', null=True, on_delete=models.SET_NULL)
     value = models.TextField()
     description = models.TextField(null=True, blank=True)
     loc_description = models.ManyToManyField(
@@ -617,6 +634,7 @@ class Tag(models.Model):
     @mark_safe
     def get_loc(self):
         return "<br />".join(str(t) for t in self.loc_msg.all())
+
     get_loc.short_description = "Localized Names"
     get_loc.name = "Localized Names"
     get_loc.allow_tags = True
@@ -651,8 +669,8 @@ class TagRelationship(models.Model):
     """
     Allows Tags to be tiered for more complex filtering and interactions
     """
-    tag = models.ForeignKey(Tag, on_delete = models.CASCADE)
-    parent = models.ForeignKey("self", null=True, blank=True, on_delete = models.CASCADE)
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
+    parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.CASCADE)
 
     def __str__(self):
         return str(self.id) + self.tag.value + str(self.parent)
@@ -666,8 +684,8 @@ class TimedAsset(models.Model):
     """
     Items to play at specific times of the stream duration.
     """
-    project = models.ForeignKey(Project, on_delete = models.CASCADE)
-    asset = models.ForeignKey(Asset, on_delete = models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
     # Asset start time in seconds
     start = models.FloatField()
     # Asset end time in seconds
@@ -705,11 +723,11 @@ class UIElement(models.Model):
         ('text_overlay', 'text overlaid on image'),
     )
     uielementname = models.ForeignKey(
-        'UIElementName', verbose_name="UI Element Name", on_delete = models.CASCADE)
+        'UIElementName', verbose_name="UI Element Name", on_delete=models.CASCADE)
     variant = models.CharField(max_length=15, choices=VARIANTS)
     file_extension = models.CharField(max_length=10, choices=FILE_EXTENSIONS,
                                       verbose_name="File Extension")
-    project = models.ForeignKey(Project, on_delete = models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
     label_text_loc = models.ManyToManyField(LocalizedString, related_name='label_text_string',
                                             blank=True, verbose_name="Label Text")
     label_text_color = models.CharField(max_length=10, blank=True, verbose_name="Label Text Color (hex)")
@@ -774,16 +792,17 @@ class UIGroup(models.Model):
         LocalizedString, blank=True)
     ui_mode = models.CharField(default=LISTEN, max_length=6, blank=False,
                                choices=UI_MODES)
-    tag_category = models.ForeignKey(TagCategory, on_delete = models.CASCADE)
+    tag_category = models.ForeignKey(TagCategory, on_delete=models.CASCADE)
     select = models.CharField(default=SINGLE, max_length=7, blank=False,
                               choices=SELECT_METHODS)
     active = models.BooleanField(default=True)
     index = models.IntegerField()
-    project = models.ForeignKey(Project, on_delete = models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
 
     @mark_safe
     def get_header_text_loc(self):
         return "<br />".join(str(t) for t in self.header_text_loc.all())
+
     get_header_text_loc.short_description = "Localized Header Text"
     get_header_text_loc.name = "Localized Header Text"
     get_header_text_loc.allow_tags = True
@@ -811,12 +830,13 @@ class UIItem(models.Model):
     """
     A representation of how Tags should be displayed in client UI
     """
-    ui_group = models.ForeignKey(UIGroup, on_delete = models.CASCADE)
+    ui_group = models.ForeignKey(UIGroup, on_delete=models.CASCADE)
     index = models.IntegerField()
-    tag = models.ForeignKey(Tag, on_delete = models.CASCADE)
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
     default = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
-    parent = models.ForeignKey("self", null=True, blank=True, on_delete = models.CASCADE)
+    parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.CASCADE)
+
     # def toTagDictionary(self):
     # return {'tag_id':self.tag.id,'order':self.index,'value':self.tag.value}
 
@@ -833,7 +853,7 @@ class UserProfile(models.Model):
     """
     Extends built-in Django User functionality
     """
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete = models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     device_id = models.CharField(max_length=255, null=True)
     client_type = models.CharField(max_length=255, null=True)
 
@@ -855,19 +875,21 @@ class Vote(models.Model):
         (BLOCK_USER, 'block_user'),
     )
     voter = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete = models.SET_NULL)
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
     value = models.IntegerField(null=True, blank=True)
-    session = models.ForeignKey(Session, on_delete = models.CASCADE)
-    asset = models.ForeignKey(Asset, on_delete = models.CASCADE)
+    session = models.ForeignKey(Session, on_delete=models.CASCADE)
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
     type = models.CharField(max_length=16, choices=VOTE_TYPES)
 
     def __str__(self):
-        return str(self.id) + ": Session id: " + str(self.session.id) + ": Asset id: " + str(self.asset.id) + ": Type: " + str(self.type)
+        return str(self.id) + ": Session id: " + str(self.session.id) + ": Asset id: " + str(
+            self.asset.id) + ": Type: " + str(self.type)
 
 
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
         UserProfile.objects.get_or_create(user=instance)
+
 
 post_save.connect(create_user_profile, sender=settings.AUTH_USER_MODEL)
 
