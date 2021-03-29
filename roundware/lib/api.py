@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.exceptions import ParseError
 from roundware.rw import models
-from roundware.lib import  discover_audiolength, convertaudio
+from roundware.lib import discover_audiolength, convertaudio
 from roundware.lib.exception import RoundException
 from django.conf import settings
 from django.db.models import Count, Avg
@@ -21,6 +21,7 @@ import logging
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
+
 def t(msg, field, language):
     """
     Locates the translation for the msg in the field object for the provided
@@ -32,6 +33,7 @@ def t(msg, field, language):
     except:
         pass
     return msg
+
 
 # This function only used by API/2 to keep backwards compatability
 def get_project_tags_old(p=None, s=None):
@@ -66,8 +68,8 @@ def get_project_tags_old(p=None, s=None):
                     default.append(mapping.tag.id)
                 # masterOptionsList.append(mapping.toTagDictionary())
                 # def toTagDictionary(self):
-                    # return
-                    # {'tag_id':self.tag.id,'order':self.index,'value':self.tag.value}
+                # return
+                # {'tag_id':self.tag.id,'order':self.index,'value':self.tag.value}
 
                 masterOptionsList.append({'tag_id': mapping.tag.id, 'order': mapping.index, 'data': mapping.tag.data,
                                           'relationships': mapping.tag.get_relationships_old(),
@@ -83,9 +85,9 @@ def get_project_tags_old(p=None, s=None):
 
     return modes
 
+
 # This function is used in API/2 (aliased as get_project_tags)
 def get_project_tags_new(p=None, s=None):
-
     if s is None and p is None:
         raise RoundException("Must pass either a project or a session")
 
@@ -181,7 +183,6 @@ def apache_safe_daemon_subprocess(command):
     # logger.debug("subprocess_stdout: " + stderr)
 
 
-
 def form_to_request(form):
     request = {}
     for p in ['project_id', 'session_id', 'asset_id']:
@@ -216,7 +217,6 @@ def form_to_request(form):
     return request
 
 
-
 def check_for_single_audiotrack(session_id):
     ret = False
     session = models.Session.objects.select_related(
@@ -225,6 +225,7 @@ def check_for_single_audiotrack(session_id):
     if tracks.count() == 1:
         ret = True
     return ret
+
 
 # def check_is_active(session_id):
 #     session = models.Session.objects.select_related('project').get(id=session_id)
@@ -254,6 +255,7 @@ def create_envelope(request):
     env.save()
 
     return {"envelope_id": env.id}
+
 
 # add_asset_to_envelope (POST method)
 # args (operation, envelope_id, session_id, file, latitude, longitude, [tagids])
@@ -309,8 +311,12 @@ def add_asset_to_envelope(request, envelope_id=None):
             "asset_id": asset.id}
 
 
-
 def save_asset_from_request(request, session, asset=None):
+    mediatype = get_parameter_from_request(
+        request, 'mediatype') if not asset else asset.mediatype
+    if mediatype == "text":
+        asset.save()
+
     log_event("start_upload", session.id, request.GET)
     fileitem = asset.file if asset else request.FILES.get('file')
     if fileitem is None or not fileitem.name:
@@ -404,9 +410,9 @@ def save_asset_from_request(request, session, asset=None):
         submitted = get_parameter_from_request(request, 'submitted')
         # set submitted variable to proper boolean value if it is
         # passed as parameter
-        if submitted in [ "N", "n", "false", "False", "0" ]:
+        if submitted in ["N", "n", "false", "False", "0"]:
             submitted = False
-        elif submitted in [ "Y", "y", "true", "True", "1" ]:
+        elif submitted in ["Y", "y", "true", "True", "1"]:
             submitted = True
         # if submitted isn't passed or blank string
         elif submitted is None or len(submitted) == 0:
@@ -533,6 +539,7 @@ def _get_current_streaming_asset(session_id):
     except IndexError:
         return None
 
+
 def vote_asset(request, asset_id=None):
     if hasattr(request, 'data'):
         form = request.data
@@ -603,7 +610,6 @@ def vote_asset(request, asset_id=None):
         return {"vote": v}
 
 
-
 ###################################
 # WARNING
 ###################################
@@ -622,15 +628,16 @@ def vote_count_by_asset(asset_id):
     Provides a count of votes, by vote type, for a given asset
     """
     counts = models.Vote.objects.all() \
-                                .filter(asset_id=asset_id) \
-                                .values('type') \
-                                .annotate(total=Count('type')).order_by('total')
+        .filter(asset_id=asset_id) \
+        .values('type') \
+        .annotate(total=Count('type')).order_by('total')
     avg = models.Vote.objects.all().filter(asset_id=asset_id, type="rate").aggregate(Avg('value'))
     if avg["value__avg"] is not None:
         for count in counts:
             if count["type"] == "rate":
                 count["avg"] = avg["value__avg"]
     return counts
+
 
 def vote_summary_by_asset(asset_id, vote_type=None):
     """
@@ -649,7 +656,7 @@ def vote_summary_by_asset(asset_id, vote_type=None):
             response = counts.count()
     else:
         counts = counts.values('type') \
-                       .annotate(total=Count('type')).order_by('total')
+            .annotate(total=Count('type')).order_by('total')
         avg = models.Vote.objects.all().filter(asset_id=asset_id, type="rate").aggregate(Avg('value'))
         if avg["value__avg"] is not None:
             for count in counts:
@@ -682,6 +689,7 @@ def get_projects_by_location(projects, lat, lon):
                     break
     return available_projects
 
+
 # save speaker audio from request and return external url to audio
 def save_speaker_from_request(request):
     fileitem = request.FILES.get('file')
@@ -693,7 +701,8 @@ def save_speaker_from_request(request):
     logger.info("Processing speaker audio:%s for project:%s", fileitem.name, request.data["project"])
     (filename_prefix, filename_extension) = os.path.splitext(fileitem.name)
 
-    dest_file = "speaker-project" + str(request.data["project"]) + "-" + filename_prefix + "-" + time.strftime("%Y%m%d-%H%M%S")
+    dest_file = "speaker-project" + str(request.data["project"]) + "-" + filename_prefix + "-" + time.strftime(
+        "%Y%m%d-%H%M%S")
     dest_filename = dest_file + filename_extension
     dest_filepath = os.path.join(settings.MEDIA_ROOT, dest_filename)
 
