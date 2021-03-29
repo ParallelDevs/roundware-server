@@ -4,8 +4,8 @@ services:
     image: postgis/postgis
     environment:
       POSTGRES_HOST_AUTH_METHOD: trust
-      POSTGRES_USER: round
-      POSTGRES_PASSWORD: round
+      POSTGRES_USER: "round"
+      POSTGRES_PASSWORD: "round"
     ports:
       - "5432"
   roundware:
@@ -18,8 +18,11 @@ services:
       ROUNDWARE_DEBUG: "true"
       ROUNDWARE_DB_HOST: "roundware-db"
       ROUNDWARE_DB_NAME: "round"
+      ROUNDWARE_DB_USER: "round"
+      ROUNDWARE_DB_PASSWORD: "round"
     volumes:
-      - logs:/roundware/logs
+      - ./logs:/code/roundware/logs
+      - ./:/code/
     depends_on:
       - roundware-db
 
