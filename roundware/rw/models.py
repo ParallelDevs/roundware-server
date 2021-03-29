@@ -55,7 +55,7 @@ class Asset(models.Model):
         location=settings.MEDIA_ROOT,
         base_url=settings.MEDIA_URL, ),
         #    content_types=settings.ALLOWED_MIME_TYPES,
-        upload_to=".", help_text="Upload file")
+        upload_to=".", help_text="Upload file",blank=True,null=True)
     volume = models.FloatField(null=True, blank=True, default=1.0)
 
     submitted = models.BooleanField(default=True)
