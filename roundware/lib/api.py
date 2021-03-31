@@ -266,7 +266,7 @@ def create_envelope(request):
 # returns success bool
 # {"success": true}
 # @profile(stats=True)
-def add_asset_to_envelope(request, envelope_id=None):
+def add_asset_to_envelope(request):
     # get asset_id from the GET request
     asset_id = get_parameter_from_request(request, 'asset_id')
     asset = None
@@ -278,23 +278,17 @@ def add_asset_to_envelope(request, envelope_id=None):
             raise RoundException(
                 "Invalid Asset ID Provided. No Asset exists with ID %s" % asset_id)
 
-    if envelope_id is None:
-        envelope_id = get_parameter_from_request(request, 'envelope_id', True)
-    logger.debug("Found envelope_id: %s", envelope_id)
+    session_id = get_parameter_from_request(request, 'session', True)
 
     try:
-        envelope = models.Envelope.objects.select_related(
-            'session').get(id=envelope_id)
+        session = models.Session.objects.get(id=session_id)
     except models.Envelope.DoesNotExist:
         raise RoundException(
-            "Invalid Envelope ID Provided. No Envelope exists with ID %s" % envelope_id)
+            "Invalid Envelope ID Provided. No Envelope exists with ID %s" % session_id)
 
-    session = envelope.session
+
 
     asset = save_asset_from_request(request, session, asset=asset)
-
-    envelope.assets.add(asset)
-    envelope.save()
     logger.info("Session %s - Asset %s created for file: %s",
                 session.id, asset.id, asset.file.name)
 
@@ -314,8 +308,22 @@ def add_asset_to_envelope(request, envelope_id=None):
 def save_asset_from_request(request, session, asset=None):
     mediatype = get_parameter_from_request(
         request, 'mediatype') if not asset else asset.mediatype
+
     if mediatype == "text":
+        asset = models.Asset(latitude= get_parameter_from_request(request, 'latitude', True),
+                             longitude=get_parameter_from_request(request, 'longitude', True),
+                             filename=get_parameter_from_request(request, 'filename', True),
+                             session=session,
+                             submitted=get_parameter_from_request(request, 'submitted', True),
+                             mediatype=get_parameter_from_request(request, 'mediatype', True),
+                             description=get_parameter_from_request(request, 'description', True),
+                             volume=0,
+                             weight=0,
+                             language=session.language,
+                             project=session.project,
+                             user=None)
         asset.save()
+        return  asset
 
     log_event("start_upload", session.id, request.GET)
     fileitem = asset.file if asset else request.FILES.get('file')
@@ -441,7 +449,7 @@ def save_asset_from_request(request, session, asset=None):
         if description is None:
             description = ""
         volume = get_parameter_from_request(request, 'volume')
-        if volume is None:
+        if volume is None or volume is '':
             volume = 1.0
         weight = get_parameter_from_request(request, 'weight')
         if weight is None:
@@ -453,7 +461,7 @@ def save_asset_from_request(request, session, asset=None):
             user = User.objects.get(pk=user_id)
         except:
             # determine User from provided session_id
-            session_id = get_parameter_from_request(request, 'session_id')
+            session_id = get_parameter_from_request(request, 'session')
             device_id = models.Session.objects.get(id=session_id).device_id
             try:
                 user = User.objects.get(userprofile__device_id=device_id)
