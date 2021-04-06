@@ -46,6 +46,7 @@ class AssetSerializer(AdminLocaleStringSerializerMixin, serializers.ModelSeriali
             'latitude',
             'title',
             'author',
+            'email_author',
             'longitude',
             'shape',
             'filename',

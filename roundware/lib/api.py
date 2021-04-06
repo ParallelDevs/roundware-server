@@ -312,6 +312,9 @@ def save_asset_from_request(request, session, asset=None):
     if mediatype == "text":
         asset = models.Asset(latitude= get_parameter_from_request(request, 'latitude', True),
                              longitude=get_parameter_from_request(request, 'longitude', True),
+                             title= get_parameter_from_request(request, 'title', True),
+                             author= get_parameter_from_request(request, 'author', True),
+                             email_author= get_parameter_from_request(request, 'email_author', True),
                              filename=get_parameter_from_request(request, 'filename', True),
                              session=session,
                              submitted=get_parameter_from_request(request, 'submitted', True),
@@ -471,6 +474,9 @@ def save_asset_from_request(request, session, asset=None):
                 pass
 
         asset = models.Asset(latitude=latitude,
+                             title= get_parameter_from_request(request, 'title', True),
+                             author= get_parameter_from_request(request, 'author', True),
+                             email_author= get_parameter_from_request(request, 'email_author', True),
                              longitude=longitude,
                              filename=newfilename,
                              session=session,
