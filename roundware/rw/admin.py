@@ -12,6 +12,7 @@ from roundware.rw.filters import AudiolengthListFilter, TagCategoryListFilter
 
 from leaflet.admin import LeafletGeoAdmin
 
+
 class VoteInline(admin.TabularInline):
     model = Vote
     extra = 1
@@ -112,10 +113,10 @@ class ProjectProtectedModelAdmin(admin.ModelAdmin):
 
         return qset.filter(project__in=accessible_projects)
 
+
 class ProjectModelAdmin(GuardedModelAdmin):
 
-     def get_queryset(self, request):
-
+    def get_queryset(self, request):
         if request.user.is_superuser:
             return super(admin.ModelAdmin, self).get_queryset(request)
 
@@ -129,7 +130,10 @@ def copy_asset(modeladmin, request, queryset):
         obj.save()
         for i in tags:
             obj.tags.add(i)
+
+
 copy_asset.short_description = "Copy selected assets"
+
 
 def copy_asset_with_votes(modeladmin, request, queryset):
     for obj in queryset:
@@ -141,7 +145,10 @@ def copy_asset_with_votes(modeladmin, request, queryset):
             obj.tags.add(i)
         for i in votes:
             obj.vote_set.add(i)
+
+
 copy_asset_with_votes.short_description = "Copy selected assets while retaining votes"
+
 
 class AssetAdmin(ProjectProtectedModelAdmin):
     valid_lookups = ('tags__tag_category__name', 'tags__description')
@@ -185,31 +192,28 @@ class AssetAdmin(ProjectProtectedModelAdmin):
         if not change:
             add_asset_to_envelope(instance=obj)
 
-    actions = [copy_asset, copy_asset_with_votes]
-    actions_on_bottom = True
+    actions = []
+    actions_on_bottom = False
     ordering = ['-id']
     # save_as = True
     list_per_page = 25
     inlines = [
-        EnvelopeInline,
-        VoteInline,
-        TimedAssetInline,
+
     ]
-    #exclude = ('tags',)
+    # exclude = ('tags',)
     # , 'longitude', 'latitude')#, 'filename')
     readonly_fields = ('location_map', 'audio_player', 'media_display',
                        'audiolength', 'session', 'created', 'updated')
-    list_display = ('id', 'session', 'submitted', 'project', 'media_link_url', 'mediatype', 'audio_player', 'created',
-                    'norm_audiolength', 'get_likes', 'get_flags', 'get_tags', 'weight', 'volume', )
-    list_filter = ('project', 'submitted', 'mediatype', 'created', 'language',
-                   ('audiolength', AudiolengthListFilter), ('tags', TagCategoryListFilter))
-    list_editable = ('submitted', 'weight', 'volume')
-    search_fields = ('description',)
+    list_display = ('title', 'mediatype', 'audio_player', 'created', 'submitted')
+    list_filter = ('submitted', 'mediatype', 'created',)
+    list_editable = ('submitted',)
+    search_fields = ('description', 'title')
     save_on_top = True
     filter_horizontal = ('tags', 'loc_description')
     fieldsets = (
         ('Media Data', {
             'fields': (
+                'submitted',
                 'mediatype',
                 'title',
                 'email_author',
@@ -219,33 +223,18 @@ class AssetAdmin(ProjectProtectedModelAdmin):
                 'longitude',
                 'media_display',
                 'file',
-                'user',
-                'volume',
-                'audiolength',
-                'start_time',
-                'end_time',
                 'description',
-                'loc_description'
+
             )
         }),
         (None, {
             'fields': (
-                'project',
-                'language',
-                'session',
                 'created',
                 'updated',
-                'weight',
-                'submitted',
-                'tags'
+
             )
         }),
-        ('Geographical Data', {
-            'fields': (
-                'location_map',
-                'shape'
-            )
-        })
+
     )
 
     class Media:
@@ -284,15 +273,17 @@ class TagAdmin(admin.ModelAdmin):
     list_filter = ('project', 'tag_category',)
     ordering = ['id']
     filter_vertical = ('loc_msg', 'loc_description')
-    filter_horizontal = ('relationships_old',) # TODO: This might need an update..?
+    filter_horizontal = ('relationships_old',)  # TODO: This might need an update..?
     # inlines = [
     #    AssetTagsInline,
     # ]
     change_list_template = 'admin/tag_change_list.html'
 
+
 class TagRelationshipAdmin(admin.ModelAdmin):
     list_display = ('id', 'tag_id', 'parent_id')
     ordering = ['id']
+
 
 class LanguageAdmin(admin.ModelAdmin):
     list_display = ('id', 'language_code', 'name')
@@ -370,7 +361,7 @@ class UIGroupAdmin(ProjectProtectedModelAdmin):
                     'ui_mode', 'tag_category', 'select', 'active', 'index')
     list_filter = ('project', 'ui_mode', 'tag_category')
     ordering = ['id']
-    filter_horizontal = ('header_text_loc', )
+    filter_horizontal = ('header_text_loc',)
     save_as = True
 
 
@@ -378,7 +369,7 @@ class UIGroupAdmin(ProjectProtectedModelAdmin):
 # UIGroup.
 class UIItemAdmin(ProjectProtectedThroughUIModelAdmin):
     list_display = ('id', 'active', 'ui_group', 'index', 'tag', 'default')
-    list_filter = ('ui_group_id__project_id','ui_group_id__ui_mode','active','ui_group')
+    list_filter = ('ui_group_id__project_id', 'ui_group_id__ui_mode', 'active', 'ui_group')
     list_editable = ('active', 'default', 'index')
     ordering = ['id']
     save_as = True
@@ -407,9 +398,9 @@ class UIElementNameAdmin(ProjectProtectedModelAdmin):
 class AudiotrackAdmin(ProjectProtectedModelAdmin):
     list_display = ('id', 'active', 'project', 'norm_minduration',
                     'norm_maxduration', 'norm_mindeadair', 'norm_maxdeadair',
-                    'fadeout_when_filtered','timed_asset_priority')
+                    'fadeout_when_filtered', 'timed_asset_priority')
     list_filter = ('project', 'active')
-    list_editable = ('active','fadeout_when_filtered','timed_asset_priority')
+    list_editable = ('active', 'fadeout_when_filtered', 'timed_asset_priority')
     ordering = ['id']
     save_as = True
     filter_horizontal = ('tag_filters',)
@@ -417,7 +408,7 @@ class AudiotrackAdmin(ProjectProtectedModelAdmin):
         (None, {
             'fields': ('active', 'project', 'minvolume', 'maxvolume',
                        'start_with_silence', 'banned_duration', 'repeatrecordings',
-                       'fadeout_when_filtered','timed_asset_priority')
+                       'fadeout_when_filtered', 'timed_asset_priority')
         }),
         ('Chunks', {
             'fields': ('minduration', 'maxduration', 'mindeadair', 'maxdeadair')
@@ -453,6 +444,7 @@ class EnvelopeAdmin(ProjectProtectedThroughSessionModelAdmin):
         """
         Given an inline formset save it to the database.
         """
+
         def set_session(instance):
             if not instance.session:
                 instance.session = form.cleaned_data['session']
@@ -504,7 +496,7 @@ class SpeakerAdmin(LeafletGeoAdmin, ProjectProtectedModelAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('activeyn', 'code', 'project', 'maxvolume', 'minvolume', 'uri', )
+            'fields': ('activeyn', 'code', 'project', 'maxvolume', 'minvolume', 'uri',)
         }),
         ('Geographical Data', {
             'fields': ('shape', 'attenuation_distance'),
