@@ -6,6 +6,8 @@ services:
       POSTGRES_HOST_AUTH_METHOD: trust
       POSTGRES_USER: "round"
       POSTGRES_PASSWORD: "round"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     ports:
       - "5432"
   roundware:
@@ -28,3 +30,4 @@ services:
 
 volumes:
   logs:
+  pgdata:

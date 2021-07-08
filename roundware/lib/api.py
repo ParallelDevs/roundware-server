@@ -318,6 +318,7 @@ def save_asset_from_request(request, session, asset=None):
                              filename=get_parameter_from_request(request, 'filename', True),
                              session=session,
                              submitted=get_parameter_from_request(request, 'submitted', True),
+                             is_anonymous=get_parameter_from_request(request, 'is_anonymous', True),
                              mediatype=get_parameter_from_request(request, 'mediatype', True),
                              description=get_parameter_from_request(request, 'description', True),
                              volume=0,
@@ -338,11 +339,11 @@ def save_asset_from_request(request, session, asset=None):
         request, 'mediatype') if not asset else asset.mediatype
     # also observe properly underscored version of same field
     if mediatype is None:
-        mediatype = get_parameter_from_request(request, 'media_type')
+        mediatype = get_parameter_from_request(request, 'mediatype')
     # if mediatype parameter not passed, set to 'audio'
     # this ensures backwards compatibility
     if mediatype is None:
-        mediatype = "audio"
+        mediatype = "text"
 
     # copy the file to a unique name (current time and date)
     logger.debug("Session %s - Processing:%s", session.id, fileitem.name)
@@ -477,6 +478,7 @@ def save_asset_from_request(request, session, asset=None):
                              title= get_parameter_from_request(request, 'title', True),
                              author= get_parameter_from_request(request, 'author', True),
                              email_author= get_parameter_from_request(request, 'email_author', True),
+                             is_anonymous=get_parameter_from_request(request, 'is_anonymous', True),
                              longitude=longitude,
                              filename=newfilename,
                              session=session,

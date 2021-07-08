@@ -44,6 +44,7 @@ class Asset(models.Model):
     title = models.CharField(max_length=100, blank=False, default="")
     email_author = models.CharField(max_length=100, blank=False, default="")
     author = models.CharField(max_length=100, blank=False, default="")
+    is_anonymous = models.BooleanField(default=False)
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)

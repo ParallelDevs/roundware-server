@@ -214,6 +214,9 @@ class AssetAdmin(ProjectProtectedModelAdmin):
                 'title',
                 'email_author',
                 'author',
+                'is_anonymous',
+                'latitude',
+                'longitude',
                 'media_display',
                 'file',
                 'user',
@@ -240,8 +243,6 @@ class AssetAdmin(ProjectProtectedModelAdmin):
         ('Geographical Data', {
             'fields': (
                 'location_map',
-                'latitude',
-                'longitude',
                 'shape'
             )
         })

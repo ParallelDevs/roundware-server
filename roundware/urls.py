@@ -30,7 +30,7 @@ urlpatterns = [
     url(r'^accounts/login/$', LoginView.as_view(),
         {'template_name': 'admin/login.html'}),
 
-    url(r'^admin/', admin.site.urls),
+    url(r'', admin.site.urls),
 
     url(r'^rw/', include(rw_urls)),
 
