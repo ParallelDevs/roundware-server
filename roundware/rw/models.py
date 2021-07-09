@@ -59,7 +59,7 @@ class Asset(models.Model):
         upload_to=".", help_text="Upload file",blank=True,null=True)
     volume = models.FloatField(null=True, blank=True, default=1.0)
 
-    submitted = models.BooleanField(default=True)
+    submitted = models.BooleanField(default=False,blank=True)
     project = models.ForeignKey(
         'Project', null=True, blank=False, on_delete=models.SET_NULL)
 

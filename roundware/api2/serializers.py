@@ -53,7 +53,6 @@ class AssetSerializer(AdminLocaleStringSerializerMixin, serializers.ModelSeriali
             'filename',
             'file',
             'volume',
-            'submitted',
             'created',
             'updated',
             'weight',
