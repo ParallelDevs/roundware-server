@@ -3,12 +3,15 @@
 
 # The Django REST Framework Views for the V2 API.
 from __future__ import unicode_literals
+from roundware.api2.emails import NotificationsEmails
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from django.http import Http404
 from django.conf import settings
 from rest_framework.decorators import action
+
+from django.conf import settings
 
 from roundware.rw.models import (Asset, Audiotrack, Event, Envelope, Language, ListeningHistoryItem,
                                  LocalizedString, Project, ProjectGroup, Session, Speaker, Tag, TagCategory,
@@ -153,6 +156,13 @@ class AssetViewSet(viewsets.GenericViewSet, AssetPaginationMixin,):
             return Response({"detail": str(e)}, status.HTTP_400_BAD_REQUEST)
         asset_obj = Asset.objects.get(pk=result['asset_id'])
         serializer = serializers.AssetSerializer(asset_obj)
+
+
+        users = User.objects.filter(groups__name='Moderador')
+
+        for user in users:
+            NotificationsEmails.send_email_new_asset(to_email=(user.email,), to_username=user.username, asset_id=result['asset_id'])
+        
         return Response(serializer.data)
 
     def partial_update(self, request, pk):
