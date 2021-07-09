@@ -2,6 +2,7 @@
 # See COPYRIGHT.txt, AUTHORS.txt, and LICENSE.txt in the project root directory.
 
 from __future__ import unicode_literals
+from roundware.api2.emails import NotificationsEmails
 from guardian.admin import GuardedModelAdmin
 from guardian.shortcuts import get_objects_for_user
 from .models import *
@@ -183,6 +184,12 @@ class AssetAdmin(ProjectProtectedModelAdmin):
         return super(AssetAdmin, self).lookup_allowed(lookup, *args, **kwargs)
 
     def save_model(self, request, obj, form, change):
+        # Get asset by id
+        asset = Asset.objects.get(pk=obj.pk)
+
+        if asset.submitted == False and obj.submitted == True:
+            NotificationsEmails.send_email_new_asset_published(to_email=(obj.email_author,),author=obj.author,asset_id=obj.id)
+                    
         # only call create_envelope if the model is being added.
         if not change:
             create_envelope(instance=obj)

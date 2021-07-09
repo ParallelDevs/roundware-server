@@ -318,3 +318,8 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
     'guardian.backends.ObjectPermissionBackend'
 )
+SENDGRID_SANDBOX_MODE_IN_DEBUG = False
+EMAIL_BACKEND = "sendgrid_backend.SendgridBackend"
+SENDGRID_API_KEY = "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"
+ROUNDWARE_SERVER_URL = 'http://localhost:8888';
+NUESTRA_HISTORIA_CLIENT_URL = 'http://localhost:8888/api/v1/history/';

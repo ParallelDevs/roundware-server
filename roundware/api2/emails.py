@@ -28,13 +28,15 @@ class NotificationsEmails:
         mail.send(fail_silently=False)
         
 
-    def send_email_new_asset_published(to_email,to_username):
+    def send_email_new_asset_published(to_email,author,asset_id):
+        url_new_asset = settings.ROUNDWARE_SERVER_URL + "/rw/asset/{id}/change/".format(id=asset_id);
         mail = EmailMessage(
             from_email=NotificationsEmails.from_email,
             to=to_email)
         mail.template_id = 'd-9e26ce0688cf46638fe4ebcfa3c3972d'
         mail.dynamic_template_data = {  # Sendgrid v6+ only
-            "username": to_username
+            "username": author,
+            "path_asset": url_new_asset
         }
         mail.send(fail_silently=False)
 
