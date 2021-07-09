@@ -3,7 +3,7 @@ vagrant_ansible_inventory_default
 *.pyc
 build
 roundware/settings/local_settings.py
-
+/venv/
 build
 static
 local_settings.py
