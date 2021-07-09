@@ -29,7 +29,7 @@ class NotificationsEmails:
         
 
     def send_email_new_asset_published(to_email,author,asset_id):
-        url_new_asset = settings.ROUNDWARE_SERVER_URL + "/rw/asset/{id}/change/".format(id=asset_id);
+        url_new_asset = settings.NUESTRA_HISTORIA_CLIENT_URL + "explore/{id}/".format(id=asset_id);
         mail = EmailMessage(
             from_email=NotificationsEmails.from_email,
             to=to_email)
