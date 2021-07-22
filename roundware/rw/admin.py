@@ -184,20 +184,26 @@ class AssetAdmin(ProjectProtectedModelAdmin):
         return super(AssetAdmin, self).lookup_allowed(lookup, *args, **kwargs)
 
     def save_model(self, request, obj, form, change):
+        print('save_model')
+        print(obj.email_author)
         # Get asset by id
-        asset = Asset.objects.get(pk=obj.pk)
+        try:
+            asset = Asset.objects.get(pk=obj.pk)
+            if asset.submitted == False and obj.submitted == True:
+                NotificationsEmails.send_email_new_asset_published(to_email=(obj.email_author,), author=obj.author,
+                                                                   asset_id=obj.id)
+        except:
+            NotificationsEmails.send_email_new_asset_published(to_email=(obj.email_author,), author=obj.author,
+                                                               asset_id=obj.id)
 
-        if asset.submitted == False and obj.submitted == True:
-            NotificationsEmails.send_email_new_asset_published(to_email=(obj.email_author,),author=obj.author,asset_id=obj.id)
-                    
-        # only call create_envelope if the model is being added.
-        if not change:
-            create_envelope(instance=obj)
+        # # only call create_envelope if the model is being added.
+        # if not change:
+        #     create_envelope(instance=obj)
         obj.save()
 
-        # only call add_asset_to_envelope when the model is being added.
-        if not change:
-            add_asset_to_envelope(instance=obj)
+        # # only call add_asset_to_envelope when the model is being added.
+        # if not change:
+        #     add_asset_to_envelope(instance=obj)
 
     actions = []
     actions_on_bottom = False

@@ -52,14 +52,15 @@ class Asset(models.Model):
     longitude = models.FloatField(null=True, blank=False)
     shape = models.MultiPolygonField(geography=True, null=True, blank=True)
     filename = models.CharField(max_length=256, null=True, blank=True)
-    file = ValidatedFileField(storage=FileSystemStorage(
-        location=settings.MEDIA_ROOT,
-        base_url=settings.MEDIA_URL, ),
-        #    content_types=settings.ALLOWED_MIME_TYPES,
-        upload_to=".", help_text="Upload file",blank=True,null=True)
+    # file = ValidatedFileField(storage=models.FileField(upload_to='media/'),
+    #                           #    content_types=settings.ALLOWED_MIME_TYPES,
+    #                           upload_to=".", help_text="Upload file", blank=True, null=True)
+
+    file = models.FileField(upload_to='media/', blank=True, null=True)
+
     volume = models.FloatField(null=True, blank=True, default=1.0)
 
-    submitted = models.BooleanField(default=False,blank=True)
+    submitted = models.BooleanField(default=False, blank=True)
     project = models.ForeignKey(
         'Project', null=True, blank=False, on_delete=models.SET_NULL)
 
@@ -172,7 +173,7 @@ class Asset(models.Model):
                    >%s %s</div>""" % (self.filename, excerpt, more_str)
         except Exception as e:
             return """<div class="media-display" data-filename="%s">""" + '%s (%s)' % (
-            self.filename, e.message, type(e)) + """</div>"""
+                self.filename, e.message, type(e)) + """</div>"""
 
     text_display.short_name = "text"
     text_display.allow_tags = True

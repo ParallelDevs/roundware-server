@@ -17,7 +17,7 @@ from roundware.rw.models import (Asset, Audiotrack, Event, Envelope, Language, L
                                  LocalizedString, Project, ProjectGroup, Session, Speaker, Tag, TagCategory,
                                  TagRelationship, TimedAsset, UIElement, UIElementName, UIGroup,
                                  UIItem, UserProfile, Vote)
-from roundware.api2 import serializers
+from roundware.api2 import serializers, permissions
 from roundware.api2.filters import (AssetFilterSet, AudiotrackFilterSet, EnvelopeFilterSet, EventFilterSet,
                                     LanguageFilterSet, ListeningHistoryItemFilterSet, LocalizedStringFilterSet,
                                     ProjectFilterSet, ProjectGroupFilterSet, SessionFilterSet, SpeakerFilterSet,
@@ -27,7 +27,7 @@ from roundware.api2.filters import (AssetFilterSet, AudiotrackFilterSet, Envelop
 from roundware.lib.api import (get_project_tags_new as get_project_tags,
                                add_asset_to_envelope,
                                save_asset_from_request, vote_asset, get_projects_by_location,
-                               vote_count_by_asset, log_event, save_speaker_from_request)
+                               vote_count_by_asset, log_event, save_speaker_from_request, get_parameter_from_request)
 from roundware.api2.permissions import AuthenticatedReadAdminWrite
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated, DjangoObjectPermissions
@@ -43,9 +43,10 @@ from random import sample
 from datetime import datetime
 from distutils.util import strtobool
 from collections import OrderedDict
+
 try:
     from profiling import profile
-except ImportError: # pragma: no cover
+except ImportError:  # pragma: no cover
     pass
 
 logger = logging.getLogger(__name__)
@@ -92,24 +93,14 @@ class AssetPagination(PageNumberPagination):
     max_page_size = 10000
 
 
-class AssetViewSet(viewsets.GenericViewSet, AssetPaginationMixin,):
+class AssetViewSet(viewsets.ModelViewSet, AssetPaginationMixin, ):
     """
-    API V2: api/2/assets/
-            api/2/assets/:id/
-            api/2/assets/:id/votes/
-            api/2/assets/random/
-            api/2/assets/blocked/
+    API endpoint that allows users to be viewed or edited.
     """
-
-    # TODO: Implement DjangoObjectPermissions
-    queryset = Asset.objects.prefetch_related('tags', 'loc_description', 'loc_alt_text', 'envelope') \
-                            .select_related('session', 'project', 'language', 'initialenvelope').all()
+    queryset = Asset.objects.all()
+    serializer_class = serializers.AssetSerializer
     permission_classes = (IsAuthenticated,)
     pagination_class = AssetPagination
-    serializer_class = serializers.AssetSerializer
-    filter_backends = (DjangoFilterBackend, OrderingFilter,)
-    ordering_fields = ('id', 'session_id', 'audiolength', 'weight', 'volume')
-    filter_class = AssetFilterSet
 
     # @profile(stats=True)
     def list(self, request):
@@ -130,189 +121,24 @@ class AssetViewSet(viewsets.GenericViewSet, AssetPaginationMixin,):
         serializer = self.get_serializer(assets, context={"admin": "admin" in request.query_params}, many=True)
         return Response(serializer.data)
 
-    def retrieve(self, request, pk=None):
-        """
-        GET api/2/assets/:id/ - Get Asset by id
-        """
-        try:
-            asset = Asset.objects.get(pk=pk)
-        except Asset.DoesNotExist:
-            raise Http404("Asset not found")
-        serializer = serializers.AssetSerializer(asset, context={"admin": "admin" in request.query_params})
-        return Response(serializer.data)
-
     def create(self, request):
         """
         POST api/2/assets/ - Create a new Asset
         """
-        if "file" not in request.data:
-            raise ParseError("Must supply file for asset content")
-        # if not request.data["envelope_ids"].isdigit():
-        #     raise ParseError("Must provide a single envelope_id in envelope_ids parameter for POST. "
-        #                      "You can add more envelope_ids in subsequent PATCH calls")
-        try:
-            result = add_asset_to_envelope(request)
-        except Exception as e:
-            return Response({"detail": str(e)}, status.HTTP_400_BAD_REQUEST)
-        asset_obj = Asset.objects.get(pk=result['asset_id'])
-        serializer = serializers.AssetSerializer(asset_obj)
-
-
-        users = User.objects.filter(groups__name='Moderador')
-
-        for user in users:
-            NotificationsEmails.send_email_new_asset(to_email=(user.email,), to_username=user.username, asset_id=result['asset_id'])
-        
-        return Response(serializer.data)
-
-    def partial_update(self, request, pk):
-        """
-        PATCH api/2/assets/:id/ - Update existing Asset
-        """
-        try:
-            asset = Asset.objects.get(pk=pk)
-        except Asset.DoesNotExist:
-            raise Http404("Asset not found")
-        if 'tag_ids' in request.data:
-            request.data['tags'] = request.data['tag_ids']
-            del request.data['tag_ids']
-        if 'language_id' in request.data:
-            request.data['language'] = request.data['language_id']
-            del request.data['language_id']
-        if 'project_id' in request.data:
-            request.data['project'] = request.data['project_id']
-            del request.data['project_id']
-        if 'description_loc_ids' in request.data:
-            request.data['loc_description'] = request.data['description_loc_ids']
-            del request.data['description_loc_ids']
-        if 'alt_text_loc_ids' in request.data:
-            request.data['loc_alt_text'] = request.data['alt_text_loc_ids']
-            del request.data['alt_text_loc_ids']
-        if 'envelope_ids' in request.data:
-            request.data['envelope_set'] = request.data['envelope_ids']
-            del request.data['envelope_ids']
-        if 'user_id' in request.data:
-            request.data['user'] = request.data['user_id']
-            del request.data['user_id']
-        serializer = serializers.AssetSerializer(asset, data=request.data, partial=True)
+        serializer = serializers.AssetSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
+
+            asset_id = serializer.data['id']
+            users = User.objects.filter(groups__name='Moderador')
+
+            for user in users:
+                NotificationsEmails.send_email_new_asset(to_email=(user.email,), to_username=user.username,
+                                                         asset_id=asset_id)
+
             return Response(serializer.data)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def destroy(self, request, pk=None):
-        """
-        DELETE api/2/assets/:id/ - Delete an Asset
-        """
-        try:
-            asset = Asset.objects.get(pk=pk)
-        except Asset.DoesNotExist:
-            raise Http404("Asset not found; cannot delete!")
-        asset.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @action(methods=['post', 'get'], detail=True)
-    def votes(self, request, pk=None):
-        """
-        GET api/2/assets/votes/ - retrieve Votes for specified Asset
-        POST api/2/assets/votes/ - create Vote for specified Asset
-        """
-        if request.method == "POST":
-            vote_op = vote_asset(request, asset_id=pk)
-            vote = vote_op["vote"]
-            serializer = serializers.VoteSerializer(vote)
-            return Response(serializer.data)
-        else:
-            count = vote_count_by_asset(pk)
-            return Response(count)
-
-    @action(methods=['get'], detail=False)
-    def random(self, request, pk=None):
-        """
-        GET api/2/assets/random/ - retrieve random list of Assets filtered by parameters
-        """
-        assets = AssetFilterSet(request.query_params).qs.values_list('id', flat=True)
-        asset_count = len(assets)
-        if asset_count is 0:
-            return Response([])
-        # ensure limit isn't greater than asset_count which causes sample to fail
-        limit = min(int(request.query_params.get('limit', 1)), asset_count)
-        # ensure indices returned are unique
-        random_idx = sample(range(asset_count), limit)
-        selected_ids = [assets[x] for x in random_idx]
-        results = Asset.objects.filter(id__in=selected_ids)
-        serializer = serializers.AssetSerializer(results, many=True)
-        return Response(serializer.data)
-
-    @action(methods=['get'], detail=False)
-    def blocked(self, request, pk=None):
-        """
-        GET api/2/assets/blocked/ - retrieve list of Assets blocked by
-        particular user as represented by session_id param
-        """
-        blocked_asset_ids = []
-        session_id = request.query_params.get('session_id')
-
-        # get user id from session_id
-        User = get_user_model()
-        device_id = Session.objects.filter(id=int(session_id))[0].device_id
-        try:
-            voter = User.objects.get(userprofile__device_id=device_id)
-        except:
-            # handle api/1 which will not have User and therefore no voter
-            voter = None
-            logger.info("no user associated with device_id")
-            pass
-        # filter votes for user_id and type='blocked_asset'
-        try:
-            asset_votes = Vote.objects.filter(voter_id=voter.id, type='block_asset')
-        except:
-            asset_votes = []
-            logger.info("user hasn't blocked anything")
-            pass
-        if len(asset_votes) > 0:
-            # extract asset_id from filtered votes and add to blocked_asset_ids
-            for asset_vote in asset_votes:
-                blocked_asset_ids.append(asset_vote.asset_id)
-
-            # generate list of assets associated with users that are blocked
-            assets_of_blocked_user = Vote.objects.filter(voter_id=voter.id, type='block_user') \
-                                                 .values_list('asset_id', flat=True)
-            # generate list of sessions in which blocked assets were created
-            sessions_of_blocked_assets = Asset.objects.filter(id__in=assets_of_blocked_user) \
-                                                      .values_list('session_id', flat=True)
-            # get device_ids associated with list of sessions
-            devices_of_blocked_sessions = Session.objects.filter(id__in=sessions_of_blocked_assets) \
-                                                         .values_list('device_id', flat=True)
-            # get the users associated with device_ids
-            blocked_user_ids = User.objects.filter(userprofile__device_id__in=devices_of_blocked_sessions) \
-                                           .values_list('id', flat=True)
-            # find assets created by blocked users
-            for blocked_user_id in blocked_user_ids:
-                blocked_user_assets = self.assets_by_user(blocked_user_id)
-                # extend user_blocked_list without duplicates
-                blocked_asset_ids.extend(x for x in blocked_user_assets if x not in blocked_asset_ids)
-
-            result = OrderedDict()
-            result['device_id'] = device_id
-            result['blocked_asset_ids'] = set(blocked_asset_ids)
-            return Response(result)
-        else:
-            return Response(status=status.HTTP_204_NO_CONTENT)
-
-    def assets_by_user(self, user_id):
-        """
-        returns a list of asset_ids created by specified user_id
-        """
-        # get user's device_id
-        device_id = UserProfile.objects.filter(user__id=user_id).values('device_id')
-        # get sessions with that device_id
-        device_sessions = Session.objects.filter(device_id=device_id).values_list('id', flat=True)
-        # get asset_ids with that session_id
-        user_asset_ids = Asset.objects.filter(session_id__in=device_sessions).values_list('id', flat=True)
-
-        return user_asset_ids
-
 
 
 class AudiotrackViewSet(viewsets.ViewSet):
@@ -812,17 +638,17 @@ class ProjectViewSet(viewsets.ViewSet):
         params['ui_mode'] = 'listen'
         uigroups_listen = UIGroupFilterSet(params).qs
         serializer_listen = serializers.UIConfigSerializer(uigroups_listen,
-                                                   context={"admin": "admin" in request.query_params,
-                                                            "session": session, "mode": "listen"}, many=True)
+                                                           context={"admin": "admin" in request.query_params,
+                                                                    "session": session, "mode": "listen"}, many=True)
         sld = serializer_listen.data
         params['ui_mode'] = 'speak'
         uigroups_speak = UIGroupFilterSet(params).qs
         serializer_speak = serializers.UIConfigSerializer(uigroups_speak,
-                                                   context={"admin": "admin" in request.query_params,
-                                                            "session": session, "mode": "speak"}, many=True)
+                                                          context={"admin": "admin" in request.query_params,
+                                                                   "session": session, "mode": "speak"}, many=True)
         ssd = serializer_speak.data
-        return Response({ "listen" : sld,
-                          "speak"  : ssd })
+        return Response({"listen": sld,
+                         "speak": ssd})
 
     @action(methods=['get'], detail=True)
     def assets(self, request, pk=None):
@@ -875,8 +701,8 @@ class ProjectViewSet(viewsets.ViewSet):
         zip_url = settings.MEDIA_URL + "project" + pk + "-uielements" + params['variant'] + ".zip"
         # put config as first item for human readability
         result = OrderedDict()
-        result['config'] = { "project_id": int(pk),
-                             "files_url": zip_url }
+        result['config'] = {"project_id": int(pk),
+                            "files_url": zip_url}
         result['uielements'] = r
         return Response(result)
 
@@ -1093,7 +919,7 @@ class SpeakerViewSet(viewsets.ViewSet):
             del request.data['project_id']
         # ensure one and only one of "file" and "uri" params are passed
         if ("uri" in request.data and "file" in request.data) or \
-           ("uri" not in request.data and "file" not in request.data):
+                ("uri" not in request.data and "file" not in request.data):
             return Response({"detail": "Request must include either 'file' or 'uri', but not both."},
                             status.HTTP_400_BAD_REQUEST)
         # if request.file exists, process and add uri to request.data
@@ -1925,15 +1751,15 @@ class UserViewSet(viewsets.ViewSet):
                 user = serializer.save()
                 # obtain token for this new user
                 token = Token.objects.create(user=user)
-        return Response({"id"           : user.id,
-                         "username"     : user.username,
-                         "token"        : token.key,
-                         "first_name"   : user.first_name,
-                         "last_name"    : user.last_name,
-                         "email"        : user.email,
-                         "device_id"    : user.userprofile.device_id,
-                         "client_type"  : user.userprofile.client_type
-                        })
+        return Response({"id": user.id,
+                         "username": user.username,
+                         "token": token.key,
+                         "first_name": user.first_name,
+                         "last_name": user.last_name,
+                         "email": user.email,
+                         "device_id": user.userprofile.device_id,
+                         "client_type": user.userprofile.client_type
+                         })
 
     def partial_update(self, request, pk):
         """
